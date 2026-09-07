@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Dependency advisories land after a merge, not during one, so re-scan
+    # weekly rather than only on push.
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and guard test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` runs `prepare`, which runs the build. --ignore-scripts would
+      # skip it, so the build below is explicit rather than implied.
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # Starts the real server and fails if a denied tool is reachable.
+      # No credential and no network access required.
+      - name: Deny-list guard test
+        run: node scripts/check-denied-tools.mjs
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Hard gate. The tree is expected to be clean; a new high or critical
+      # advisory should break the build rather than sit in a report nobody opens.
+      - name: npm audit
+        run: npm audit --audit-level=high
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: github/codeql-action/init@v4.37.9
+        with:
+          languages: javascript-typescript
+          queries: security-and-quality
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      # Publishes findings to the repository's Code scanning alerts.
+      - uses: github/codeql-action/analyze@v4.37.9
+        with:
+          category: "/language:javascript-typescript"
+
+  trivy:
+    name: Trivy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      # Scans the lockfile for vulnerable dependencies and the tree for leaked
+      # secrets. Does not fail the build: npm audit above is the gate, and this
+      # job's value is the published SARIF.
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scanners: vuln,secret,misconfig
+          format: sarif
+          output: trivy.sarif
+          severity: CRITICAL,HIGH,MEDIUM
+
+      - name: Publish Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v4.37.9
+        if: always()
+        with:
+          sarif_file: trivy.sarif
+          category: trivy
