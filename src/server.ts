@@ -41,8 +41,10 @@ import { hardened } from "./policy";
 const tools = hardened(server);
 
 import { registerPostTools } from "./tools/posts";
+import { registerPageTools } from "./tools/pages";
 import { registerMemberTools } from "./tools/members";
 registerPostTools(tools);
+registerPageTools(tools);
 registerMemberTools(tools);
 import { registerUserTools } from "./tools/users";
 registerUserTools(tools);
