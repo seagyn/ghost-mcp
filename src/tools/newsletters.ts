@@ -9,10 +9,16 @@ const browseParams = {
   limit: z.number().optional(),
   page: z.number().optional(),
   order: z.string().optional(),
+  // Comma-separated list of fields to return, e.g. "id,title,slug".
+  // Slims the response; omit for Ghost's default field set.
+  fields: z.string().optional(),
 };
 const readParams = {
   id: z.string().optional(),
   slug: z.string().optional(),
+  // Comma-separated list of fields to return, e.g. "id,title,slug".
+  // Slims the response; omit for Ghost's default field set.
+  fields: z.string().optional(),
 };
 const addParams = {
   name: z.string(),
