@@ -35,28 +35,31 @@ server.resource("newsletter", new ResourceTemplate("newsletter://{newsletter_id}
 server.resource("post", new ResourceTemplate("post://{post_id}", { list: undefined }), handlePostResource);
 server.resource("blog-info", "blog://info", handleBlogInfoResource);
 
-// Register tools
+// Register tools — all registration goes through the hardened wrapper, which
+// refuses the deny-listed names in ./policy.
+import { hardened } from "./policy";
+const tools = hardened(server);
+
 import { registerPostTools } from "./tools/posts";
 import { registerMemberTools } from "./tools/members";
-registerPostTools(server);
-registerMemberTools(server);
+registerPostTools(tools);
+registerMemberTools(tools);
 import { registerUserTools } from "./tools/users";
-registerUserTools(server);
+registerUserTools(tools);
 import { registerTagTools } from "./tools/tags";
-registerTagTools(server);
+registerTagTools(tools);
 import { registerTierTools } from "./tools/tiers";
-registerTierTools(server);
+registerTierTools(tools);
 import { registerOfferTools } from "./tools/offers";
-registerOfferTools(server);
+registerOfferTools(tools);
 import { registerNewsletterTools } from "./tools/newsletters";
-registerNewsletterTools(server);
-import { registerInviteTools } from "./tools/invites";
-registerInviteTools(server);
+registerNewsletterTools(tools);
 
 import { registerRoleTools } from "./tools/roles";
-registerRoleTools(server);
-import { registerWebhookTools } from "./tools/webhooks";
-registerWebhookTools(server);
+registerRoleTools(tools);
+
+// invites and webhooks are deliberately NOT registered — see ./policy.
+// Their modules remain on disk so upstream merges cleanly.
 
 import { registerPrompts } from "./prompts";
 registerPrompts(server);
