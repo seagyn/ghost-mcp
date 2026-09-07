@@ -81,7 +81,83 @@ const deleteParams = {
   id: z.string(),
 };
 
+// --- Draft-scoped tools -----------------------------------------------------
+// See the equivalent block in src/tools/posts.ts. `status` is removed from the
+// field set rather than validated, so publishing is not expressible here, and
+// pages_draft_edit resolves updated_at itself after confirming the target is
+// still a draft.
+const { status: _statusIsForcedToDraft, ...draftMutableFields } = pageMutableFields;
+
+const draftAddParams = {
+  title: z.string(),
+  ...draftMutableFields,
+};
+const draftEditParams = {
+  id: z.string(),
+  title: z.string().optional(),
+  ...draftMutableFields,
+};
+
 export function registerPageTools(server: McpServer) {
+  // Add a DRAFT page — status forced, cannot publish.
+  server.tool(
+    "pages_draft_add",
+    draftAddParams,
+    async (args, _extra) => {
+      const options = args.html ? { source: "html" } : undefined;
+      const page = await ghostApiClient.pages.add(
+        { ...args, status: "draft" },
+        options
+      );
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(page, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  // Edit a DRAFT page — refuses anything already published.
+  server.tool(
+    "pages_draft_edit",
+    draftEditParams,
+    async (args, _extra) => {
+      const current = await ghostApiClient.pages.read({ id: args.id });
+      if (current?.status !== "draft") {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text:
+                `Refusing to edit page ${args.id}: its status is ` +
+                `"${current?.status}", not "draft". pages_draft_edit only ` +
+                `touches drafts. Use pages_edit for a published page.`,
+            },
+          ],
+        };
+      }
+      const { id, ...changes } = args;
+      const options = args.html ? { source: "html" } : undefined;
+      const page = await ghostApiClient.pages.edit(
+        { id, updated_at: current.updated_at, ...changes, status: "draft" },
+        options
+      );
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(page, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+
   // Browse pages
   server.tool(
     "pages_browse",

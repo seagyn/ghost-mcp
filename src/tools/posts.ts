@@ -74,7 +74,93 @@ const deleteParams = {
   id: z.string(),
 };
 
+// --- Draft-scoped tools -----------------------------------------------------
+//
+// posts_add and posts_edit are the full-power tools: they can publish (status
+// is settable) and they can overwrite a published post. That makes them
+// reasonable to gate behind human approval, but painful in a drafting loop.
+//
+// These two are safe by construction instead, so they can be auto-approved:
+//   - status is not a parameter at all, and is forced to "draft"
+//   - the edit refuses outright if the target is not currently a draft
+//   - the edit fetches updated_at itself, so a stale value cannot 409 and the
+//     caller does not have to read the post first
+//
+// `status` is removed from the field set rather than validated, so "publish
+// from a draft tool" is not expressible in the schema the model sees.
+const { status: _statusIsForcedToDraft, ...draftMutableFields } = postMutableFields;
+
+const draftAddParams = {
+  title: z.string(),
+  ...draftMutableFields,
+};
+const draftEditParams = {
+  id: z.string(),
+  title: z.string().optional(),
+  ...draftMutableFields,
+};
+
 export function registerPostTools(server: McpServer) {
+  // Add a DRAFT post — status forced, cannot publish.
+  server.tool(
+    "posts_draft_add",
+    draftAddParams,
+    async (args, _extra) => {
+      const options = args.html ? { source: "html" } : undefined;
+      const post = await ghostApiClient.posts.add(
+        { ...args, status: "draft" },
+        options
+      );
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(post, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  // Edit a DRAFT post — refuses anything already published, and resolves
+  // updated_at itself so the caller never supplies a stale one.
+  server.tool(
+    "posts_draft_edit",
+    draftEditParams,
+    async (args, _extra) => {
+      const current = await ghostApiClient.posts.read({ id: args.id });
+      if (current?.status !== "draft") {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text:
+                `Refusing to edit post ${args.id}: its status is ` +
+                `"${current?.status}", not "draft". posts_draft_edit only ` +
+                `touches drafts. Use posts_edit for a published post.`,
+            },
+          ],
+        };
+      }
+      const { id, ...changes } = args;
+      const options = args.html ? { source: "html" } : undefined;
+      const post = await ghostApiClient.posts.edit(
+        { id, updated_at: current.updated_at, ...changes, status: "draft" },
+        options
+      );
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(post, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+
   // Browse posts
   server.tool(
     "posts_browse",
