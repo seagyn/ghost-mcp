@@ -1,36 +1,37 @@
 {
-    "name": "@fanyangmeng/ghost-mcp",
-    "version": "0.2.0",
-    "description": "MCP server for using the Ghost API",
-    "main": "build/server.js",
-    "bin": {
-        "ghost-mcp": "build/server.js"
-    },
-    "files": [
-        "build/"
-    ],
-    "scripts": {
-        "build": "tsc",
-        "start": "node build/server.js",
-        "prepare": "npm run build",
-        "test": "echo \"Error: no test specified\" && exit 1"
-    },
-    "publishConfig": {
-        "access": "public"
-    },
-    "keywords": [],
-    "author": "Fanyang Meng (https://mfydev.link)",
-    "license": "ISC",
-    "type": "commonjs",
-    "dependencies": {
-        "@modelcontextprotocol/sdk": "^1.10.1",
-        "@tryghost/admin-api": "^1.13.13",
-        "axios": "^1.8.4",
-        "zod": "^3.25.76"
-    },
-    "devDependencies": {
-        "@types/axios": "^0.9.36",
-        "@types/node": "^22.14.1",
-        "typescript": "^5.8.3"
-    }
+  "name": "@fanyangmeng/ghost-mcp",
+  "version": "0.2.0",
+  "description": "MCP server for using the Ghost API",
+  "main": "build/server.js",
+  "bin": {
+    "ghost-mcp": "build/server.js"
+  },
+  "files": [
+    "build/"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/server.js",
+    "prepare": "npm run build",
+    "test": "node scripts/check-denied-tools.mjs",
+    "pretest": "npm run build"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [],
+  "author": "Fanyang Meng (https://mfydev.link)",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.10.1",
+    "@tryghost/admin-api": "^1.13.13",
+    "axios": "^1.8.4",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/axios": "^0.9.36",
+    "@types/node": "^22.14.1",
+    "typescript": "^5.8.3"
+  }
 }
