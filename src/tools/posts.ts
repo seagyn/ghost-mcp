@@ -9,10 +9,22 @@ const browseParams = {
   limit: z.number().optional(),
   page: z.number().optional(),
   order: z.string().optional(),
+  // Comma-separated list of fields to return, e.g. "id,title,slug".
+  // Slims the response; omit for Ghost's default field set.
+  fields: z.string().optional(),
+  // Comma-separated content formats to return, e.g. "html,plaintext".
+  // Ghost's default omits plaintext and mobiledoc, so ask explicitly.
+  formats: z.string().optional(),
 };
 const readParams = {
   id: z.string().optional(),
   slug: z.string().optional(),
+  // Comma-separated list of fields to return, e.g. "id,title,slug".
+  // Slims the response; omit for Ghost's default field set.
+  fields: z.string().optional(),
+  // Comma-separated content formats to return, e.g. "html,plaintext".
+  // Ghost's default omits plaintext and mobiledoc, so ask explicitly.
+  formats: z.string().optional(),
 };
 // Shared mutable post fields — accepted by both posts_add and posts_edit.
 // Mirrors the Ghost Admin API post resource:
