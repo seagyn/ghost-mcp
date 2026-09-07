@@ -33,6 +33,7 @@ export const DENIED_TOOLS: ReadonlySet<string> = new Set([
     "members_delete",
     "newsletters_delete",
     "offers_delete",
+    "pages_delete",
     "posts_delete",
     "tags_delete",
     "tiers_delete",
